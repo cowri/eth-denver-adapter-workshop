@@ -21,8 +21,10 @@ contract TestCurve2PoolAdapter is Test {
         adapter = new Curve2PoolAdapter(address(ocean), 0x7f90122BF0700F9E7e1F688fe926940E8839F353); // 2pool address
     }
 
-    function testSwap(bool toggle, uint256 amount) public {
+    function testSwap(bool toggle, uint256 amount, uint256 unwrapFee) public {
         vm.startPrank(wallet);
+        unwrapFee = bound(unwrapFee, 2000, type(uint256).max);
+        ocean.changeUnwrapFee(unwrapFee);
 
         address inputAddress;
         address outputAddress;
@@ -42,10 +44,28 @@ contract TestCurve2PoolAdapter is Test {
 
         uint256 prevInputBalance = IERC20(inputAddress).balanceOf(wallet);
         uint256 prevOutputBalance = IERC20(outputAddress).balanceOf(wallet);
-        
-        // TODO
-        // Write the interaction code to call the ocean and perform a swap
-    
+
+        Interaction[] memory interactions = new Interaction[](3);
+
+        interactions[0] = Interaction({ interactionTypeAndAddress: _fetchInteractionId(inputAddress, uint256(InteractionType.WrapErc20)), inputToken: 0, outputToken: 0, specifiedAmount: amount, metadata: bytes32(0) });
+
+        interactions[1] = Interaction({
+            interactionTypeAndAddress: _fetchInteractionId(address(adapter), uint256(InteractionType.ComputeOutputAmount)),
+            inputToken: _calculateOceanId(inputAddress),
+            outputToken: _calculateOceanId(outputAddress),
+            specifiedAmount: type(uint256).max,
+            metadata: bytes32(0)
+        });
+
+        interactions[2] = Interaction({ interactionTypeAndAddress: _fetchInteractionId(outputAddress, uint256(InteractionType.UnwrapErc20)), inputToken: 0, outputToken: 0, specifiedAmount: type(uint256).max, metadata: bytes32(0) });
+
+        // erc1155 token id's for balance delta
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = _calculateOceanId(inputAddress);
+        ids[1] = _calculateOceanId(outputAddress);
+
+        ocean.doMultipleInteractions(interactions, ids);
+
         uint256 newInputBalance = IERC20(inputAddress).balanceOf(wallet);
         uint256 newOutputBalance = IERC20(outputAddress).balanceOf(wallet);
 
@@ -55,8 +75,10 @@ contract TestCurve2PoolAdapter is Test {
         vm.stopPrank();
     }
 
-    function testDeposit(bool toggle, uint256 amount) public {
+    function testDeposit(bool toggle, uint256 amount, uint256 unwrapFee) public {
         vm.startPrank(wallet);
+        unwrapFee = bound(unwrapFee, 2000, type(uint256).max);
+        ocean.changeUnwrapFee(unwrapFee);
 
         address inputAddress;
 
@@ -75,10 +97,28 @@ contract TestCurve2PoolAdapter is Test {
 
         uint256 prevInputBalance = IERC20(inputAddress).balanceOf(wallet);
         uint256 prevOutputBalance = IERC20(outputAddress).balanceOf(wallet);
-        
-        // TODO
-        // Write the interaction code to call the ocean and deposit the underlying to the curve pool
-    
+
+        Interaction[] memory interactions = new Interaction[](3);
+
+        interactions[0] = Interaction({ interactionTypeAndAddress: _fetchInteractionId(inputAddress, uint256(InteractionType.WrapErc20)), inputToken: 0, outputToken: 0, specifiedAmount: amount, metadata: bytes32(0) });
+
+        interactions[1] = Interaction({
+            interactionTypeAndAddress: _fetchInteractionId(address(adapter), uint256(InteractionType.ComputeOutputAmount)),
+            inputToken: _calculateOceanId(inputAddress),
+            outputToken: _calculateOceanId(outputAddress),
+            specifiedAmount: type(uint256).max,
+            metadata: bytes32(0)
+        });
+
+        interactions[2] = Interaction({ interactionTypeAndAddress: _fetchInteractionId(outputAddress, uint256(InteractionType.UnwrapErc20)), inputToken: 0, outputToken: 0, specifiedAmount: type(uint256).max, metadata: bytes32(0) });
+
+        // erc1155 token id's for balance delta
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = _calculateOceanId(inputAddress);
+        ids[1] = _calculateOceanId(outputAddress);
+
+        ocean.doMultipleInteractions(interactions, ids);
+
         uint256 newInputBalance = IERC20(inputAddress).balanceOf(wallet);
         uint256 newOutputBalance = IERC20(outputAddress).balanceOf(wallet);
 
@@ -88,8 +128,10 @@ contract TestCurve2PoolAdapter is Test {
         vm.stopPrank();
     }
 
-    function testWithdraw(bool toggle, uint256 amount) public {
+    function testWithdraw(bool toggle, uint256 amount, uint256 unwrapFee) public {
+        unwrapFee = bound(unwrapFee, 2000, type(uint256).max);
         vm.prank(wallet);
+        ocean.changeUnwrapFee(unwrapFee);
 
         address outputAddress;
 
@@ -109,8 +151,27 @@ contract TestCurve2PoolAdapter is Test {
         uint256 prevInputBalance = IERC20(inputAddress).balanceOf(lpWallet);
         uint256 prevOutputBalance = IERC20(outputAddress).balanceOf(lpWallet);
 
-        // TODO
-        // Write the interaction code to call the ocean and withdraw the underlying to the curve pool
+        Interaction[] memory interactions = new Interaction[](3);
+
+        interactions[0] = Interaction({ interactionTypeAndAddress: _fetchInteractionId(inputAddress, uint256(InteractionType.WrapErc20)), inputToken: 0, outputToken: 0, specifiedAmount: amount, metadata: bytes32(0) });
+
+        interactions[1] = Interaction({
+            interactionTypeAndAddress: _fetchInteractionId(address(adapter), uint256(InteractionType.ComputeOutputAmount)),
+            inputToken: _calculateOceanId(inputAddress),
+            outputToken: _calculateOceanId(outputAddress),
+            specifiedAmount: type(uint256).max,
+            metadata: bytes32(0)
+        });
+
+        interactions[2] = Interaction({ interactionTypeAndAddress: _fetchInteractionId(outputAddress, uint256(InteractionType.UnwrapErc20)), inputToken: 0, outputToken: 0, specifiedAmount: type(uint256).max, metadata: bytes32(0) });
+
+        // erc1155 token id's for balance delta
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = _calculateOceanId(inputAddress);
+        ids[1] = _calculateOceanId(outputAddress);
+
+        vm.prank(lpWallet);
+        ocean.doMultipleInteractions(interactions, ids);
 
         uint256 newInputBalance = IERC20(inputAddress).balanceOf(lpWallet);
         uint256 newOutputBalance = IERC20(outputAddress).balanceOf(lpWallet);

@@ -109,7 +109,7 @@ contract TestCurve2PoolAdapter is Test {
         uint256 prevInputBalance = IERC20(inputAddress).balanceOf(lpWallet);
         uint256 prevOutputBalance = IERC20(outputAddress).balanceOf(lpWallet);
 
-            // TODO
+        // TODO
         // Write the interaction code to call the ocean and withdraw the underlying to the curve pool
 
         uint256 newInputBalance = IERC20(inputAddress).balanceOf(lpWallet);
